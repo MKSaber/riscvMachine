@@ -12,7 +12,7 @@ class machine:
         """
         
         # create a memory block of mem_size of datatype uint8 and fill it with zeros.
-        self.memory = np.zeros(mem_size, dtype=np.unit8)
+        self.memory = np.zeros(mem_size, dtype=np.uint8)
 
         # set registers to 0 ( 32 registers of type: int32)
         self.registers      = np.zeros(32, dtype=np.int32)
