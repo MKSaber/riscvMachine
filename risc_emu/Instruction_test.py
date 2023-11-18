@@ -60,3 +60,19 @@ print(m.memory[500])
 print(m.memory[501])
 print(m.memory[502])
 print(m.memory[503])
+
+
+#-------------------------------------------------------------------------------
+# Test 6: Excute instruction
+#-------------------------------------------------------------------------------
+m.registers[1] = 1
+m.registers[2] = 2
+m.excAssembly('ADD', 1, 1, 2)
+print("Excuting Assembly Instructions: " + str(m.registers[1]))
+
+#-------------------------------------------------------------------------------
+# Test 7: Excute program
+#-------------------------------------------------------------------------------
+m.reset_machine()
+m.clear_memory()
+
