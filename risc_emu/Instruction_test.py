@@ -70,9 +70,16 @@ m.registers[2] = 2
 m.excAssembly('ADD', 1, 1, 2)
 print("Excuting Assembly Instructions: " + str(m.registers[1]))
 
+
 #-------------------------------------------------------------------------------
-# Test 7: Excute program
+# Test 7: Excute program ( Fibo )
 #-------------------------------------------------------------------------------
-m.reset_machine()
-m.clear_memory()
+# m.excAssembly('Li', a0, 0)   # clear accumilator
+# m.excAssembly('Li', s0, 0)   # clear loop counter
+# m.excAssembly('Li', s1, 10)  # loop limit = 10 (Max Fibo)
+
+# m.addLabel('Loop')
+
+# m.excAssembly('BGE', , 0)
+
 
