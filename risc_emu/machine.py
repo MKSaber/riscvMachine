@@ -5,6 +5,7 @@ The current implementation does not support encoding / decoding instructionself.
 
 import numpy as np  #not necessarily needed, but it will make things easier
 import fnmatch
+import time
 
 class machine:
     def __init__(self, mem_size):
@@ -102,6 +103,19 @@ class machine:
         self.t4 = 29
         self.t5 = 30
         self.t6 = 31
+
+        #------------------------------------------------------------------------------------------------------------------------------------------------
+        # Program execution metric
+        #------------------------------------------------------------------------------------------------------------------------------------------------
+
+        self.debug = False
+        self.memory_used = 0
+        self.total_number_of_instructions = 0
+        self.number_of_branches = 0
+        self.number_of_arithmatic = 0
+        self.number_of_load_store = 0
+
+
     #------------------------------------------------------------------------------------------------------------------------------------------------
 
     # Program Counter
@@ -391,7 +405,8 @@ class machine:
     # imm[20]|imm[10:1] imm[11] | imm[19:12]    | rd                |opcode          J-type
     def storeAssembly(self, instruction, arg1, arg2, arg3=0, arg4 =0):
         """
-        stores instruction and arguments into memory after encoding using RiscV user level ISA
+        stores instruction and arguments into memory after encoding using RiscV user level ISA.
+        Using: Volume I: RISC-V User-Level ISA V2.2
         """
         instr = self.instruciton_dictionary.get(instruction)
         if(instr):
@@ -452,17 +467,21 @@ class machine:
             # write instruction into memory at address 'self.pc'
             self.write_i32(self.bits2u(bits), self.pc)
             self.incrementPC()
+
+            if self.debug == True:
+                self.memory_used += 1
         else:
             print("ERROR: instruction not supported")
-            self.dump()
+            if self.debug == True:
+                self.dump()
             self.HALT()
         
 
     #------------------------------------------------------------------------------------------------------------------------------------------------
     # Decoding functions
     #------------------------------------------------------------------------------------------------------------------------------------------------
-    def dec(self, bits):
-        """decode instruction"""
+    def decode(self, bits):
+        """decode instruction based on Volume I: RISC-V User-Level ISA V2.2"""
         opcode = self.field(bits,  6,  0)
         f3     = self.field(bits, 14, 12)
         rs2c   = self.field(bits, 24, 20)  # rs2 code
@@ -488,7 +507,8 @@ class machine:
                 break  # to speed up run-time
         if inst == 0:
             print('ERROR: this instruction is not supported: ' + bits)
-            self.dump()
+            if self.debug == True:
+                self.dump()
             self.HALT()
         
         if inst   == 'JAL'      : self.JAL      (rd,  imm_j)
@@ -507,7 +527,16 @@ class machine:
         elif inst == 'LW'       : self.LW       (rd,  imm_i, rs1)
         
         #print(inst)
+        if self.debug == True:
+            self.total_number_of_instructions += 1
+            if inst == 'LW':
+                self.number_of_load_store += 1
+            elif inst in ['ADD', 'ADDi', 'MUL', 'SUB']:
+                self.number_of_arithmatic += 1
+            elif inst in ['BLT', 'BNE', 'BEQ']:
+                self.number_of_branches += 1
 
+        print(inst)
     #------------------------------------------------------------------------------------------------------------------------------------------------
     # excute from memory functions
     #------------------------------------------------------------------------------------------------------------------------------------------------
@@ -516,16 +545,21 @@ class machine:
         """
         Executes code from start label to end label or for instructionCount number of instructions
         """
+        if self.debug == True:
+            self.excution_time = time.perf_counter()
+
         self.pc = self.getLabel('start')
         if end is None:
             for i in range(instructionCount):
                 inst = self.read_i32(self.pc)  # fetch instruction from memory
-                self.dec(np.binary_repr(self.u(inst), 32))
+                self.decode(np.binary_repr(self.u(inst), 32))
         else:  # this is for the case where argument 'end' is used
             while self.pc != self.getLabel(end):
                 inst = self.read_i32(self.pc)  # fetch instruction from memory
-                self.dec(np.binary_repr(self.u(inst), 32))
-                
+                self.decode(np.binary_repr(self.u(inst), 32))
+
+        if self.debug == True:
+            self.excution_time = time.perf_counter() - self.excution_time
     #------------------------------------------------------------------------------------------------------------------------------------------------
     # Reset Instructions
     #------------------------------------------------------------------------------------------------------------------------------------------------
@@ -533,6 +567,14 @@ class machine:
         self.registers  = np.zeros(32, dtype=np.int32)
         self.pc         = 0
         self.flag       = False
+
+        self.debug = False
+        self.memory_used = 0
+        self.total_number_of_instructions = 0
+        self.number_of_branches = 0
+        self.number_of_arithmatic = 0
+        self.number_of_load_store = 0
+
     
     def clear_memory(self):
         self.memory     = np.zeros(self.memory_size, dtype=np.uint8)

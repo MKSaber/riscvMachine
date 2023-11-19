@@ -46,43 +46,6 @@ t5 = 30
 t6 = 31
 
 
-#.data
-
-# ask1: .string "Please enter a number to compute its factorial value:   "
-# msg: .string "The result is:   \n"
-
-# .text
-
-# la a0, ask1
-# li a7, 4
-# ecall
-
-# li a7, 5
-# ecall
-
-# jal ra, Factorial
-# j print
-
-# Factorial:
-
-# beqz a0, return
-# addi sp, sp, -8
-# sw ra, 4(sp)
-# sw a0, 0(sp)
-# addi a0, a0, -1
-# jal ra, Factorial
-# lw a1, 0(sp)
-# addi sp, sp, 4
-# mul a0, a1, a0
-# lw ra, 0(sp) 
-# addi sp, sp, 4
-# jr ra
-
-# return:
-# addi a0, x0, 1
-# jr ra
-
-
 m.addLabel('return')                            #pc = 0
 m.storeAssembly('ADDi', a0, 0, 1)
 m.storeAssembly('JALR', ra, ra, 0)
