@@ -414,8 +414,6 @@ class machine:
 
 
             f7     = opcode_bits[0:7]
-            f2     = opcode_bits[5:7]
-            rs2c   = opcode_bits[8:13]  # rs2-code
             f3     = opcode_bits[14:17]
             opcode = opcode_bits[18:25]
             
@@ -435,7 +433,6 @@ class machine:
             rd    = np.binary_repr(arg1, 5)
             rs1   = np.binary_repr(arg2, 5)
             rs2   = np.binary_repr(arg3, 5)
-            rs3   = np.binary_repr(arg4, 5)
             imm_i = np.binary_repr(arg3, 12)
             imm_s = np.binary_repr(arg2, 12)
             imm_j = np.binary_repr(arg2, 21)
@@ -457,6 +454,8 @@ class machine:
             self.incrementPC()
         else:
             print("ERROR: instruction not supported")
+            self.dump()
+            self.HALT()
         
 
     #------------------------------------------------------------------------------------------------------------------------------------------------
@@ -489,8 +488,8 @@ class machine:
                 break  # to speed up run-time
         if inst == 0:
             print('ERROR: this instruction is not supported: ' + bits)
-            while(True):
-                x = 1
+            self.dump()
+            self.HALT()
         
         if inst   == 'JAL'      : self.JAL      (rd,  imm_j)
         elif inst == 'JALR'     : self.JALR     (rd,  rs1,   imm_i)
@@ -537,3 +536,20 @@ class machine:
     
     def clear_memory(self):
         self.memory     = np.zeros(self.memory_size, dtype=np.uint8)
+
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    # Dump Instructions
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    def dump(self):
+        print("Registers:")
+        print("---------")
+        for i in range(32):
+            print(self.registers[i])
+        print("---------")
+        print("")
+        print("Program Counter: ")
+        print(self.pc)
+        print("---------")
+        print("")
+        
