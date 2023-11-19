@@ -1,17 +1,18 @@
 """
 This is a small risc machine that supports multiple instruction sets: NOP, HALT, CMP, JMP, LOAD, STORE, ADD, SUB
-The current implementation does not support encoding / decoding instructions.
+The current implementation does not support encoding / decoding instructionself.
 """
 
 import numpy as np  #not necessarily needed, but it will make things easier
+import fnmatch
 
 class machine:
     def __init__(self, mem_size):
         """
-        Create a CPU state with memory = mem_size, and initialize all registers.
+        Create a CPU state with memory = mem_size, and initialize all registerself.
         """
         
-        # create a memory block of mem_size of datatype uint8 and fill it with zeros.
+        # create a memory block of mem_size of datatype uint8 and fill it with zeroself.
         self.memory         = np.zeros(mem_size, dtype=np.uint8)
         self.memory_size    = mem_size
 
@@ -35,7 +36,7 @@ class machine:
         self.pc             = np.zeros(1, dtype=np.int32)
 
         #set dictionary with supported instructions
-        self.instruciton_dictionary = {'NOP': self.NOP, 'HALT': self.HALT, 'CMP': self.CMP, 'JMP': self.JMP, 'LW': self.LW, 'SW': self.SW, 'ADD': self.ADD, 'ADDi': self.ADDi, 'SUB': self.SUB, 'XOR': self.XOR, 'AND': self.AND, 'OR': self.OR, 'BEQ': self.BEQ, 'BNE': self.BNE, 'Li': self.Li, 'BGE': self.BGE, 'BLT': self.BLT, 'JAL': self.JAL, 'MUL': self.MUL}
+        self.instruciton_dictionary = {'NOP': self.NOP, 'HALT': self.HALT, 'CMP': self.CMP, 'JMP': self.JMP, 'LW': self.LW, 'SW': self.SW, 'ADD': self.ADD, 'ADDi': self.ADDi, 'SUB': self.SUB, 'XOR': self.XOR, 'AND': self.AND, 'OR': self.OR, 'BEQ': self.BEQ, 'BNE': self.BNE, 'Li': self.Li, 'BGE': self.BGE, 'BLT': self.BLT, 'JAL': self.JAL, 'MUL': self.MUL, 'Li': self.Li, 'JALR': self.JALR}
 
         #set flag for comparisons to false
         self.flag           = False
@@ -58,7 +59,8 @@ class machine:
             '???????_?????_001_1100011': ['B',  'BNE'      ],
             '???????_?????_101_1100011': ['B',  'BGE'      ],
             '???????_?????_100_1100011': ['B',  'BLT'      ],
-            '???????_?????_???_1101111': ['J',  'JAL'      ]
+            '???????_?????_???_1101111': ['J',  'JAL'      ],
+            '???????_?????_000_1100111': ['I',  'JALR'     ]
         }
 
         # generate assembler dictionary by inverting the decoder dictionary
@@ -148,6 +150,12 @@ class machine:
         Calls JMP which saves the next instruction in rd and increments program counter by offset
         """
         self.JMP(rd, offset)
+
+    def JALR(self, rd, rs1, imm): 
+        temp = self.pc + 4
+        self.pc = (self.registers[rs1] + imm) & ~1
+        self.registers[rd] = temp
+        self.registers[0] = 0
 
     def CMP(self, rs1, rs2):
         if self.registers[rs1] == self.registers[rs2]:
@@ -332,26 +340,60 @@ class machine:
             elif    instr == self.BLT       : self.BLT(arg1, arg2, arg3)
             elif    instr == self.JAL       : self.JAL(arg1, arg2)
             elif    instr == self.MUL       : self.MUL(arg1, arg2, arg3)
+            elif    instr == self.JALR      : self.JALR(arg1, arg2, arg3)
             else                            : self.NOP()
 
-
-    def field(s, bits, hi, lo):
-        """extract bitfields from a bit-array using Verilog bit-indexing order,
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    # Helper functions
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    def field(self, bits, hi, lo):
+        """
+        extract bitfields from a bit-array using Verilog bit-indexing order,
         so [0] is the right-most bit (which is opposite order than bitstring),
-        and [1:0] are the 2 least significant bits, etc."""
+        and [1:0] are the 2 least significant bits, etc.
+        """
         return bits[len(bits) - 1 - hi : len(bits) - lo]
+    
+    def write_i32(self, x, addr):
+        """
+        write 32-bit int to memory (takes 4 byte-addresses)
+        """
+        for i in range(4): self.memory[addr + i] = (x >> (8*i)) & 0xFF
+
+    def bits2u(self, bits):
+        """convert bit-string to unsigned int"""
+        return int(bits, 2)
+    
+    def bits2i(self, bits):
+        """convert bit-string to signed int (subtract constant if msb is 1)"""
+        return self.bits2u(bits) - (1 << len(bits) if bits[0] == '1' else 0)
+    
+    def read_i32(self, addr):
+        """"read 32-bit int from memory"""
+        ret = self.i8(self.memory[addr + 3]) << 3*8
+        for i in range(3): ret += self.memory[addr + i] << i*8
+        return ret
+    
+    def i8(s,x): return np.int8(x)    # convert to 8-bit signed
+
+    def u (s,x): return np.uint32(x)  # convert to 32-bit unsigned
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    # Encoding functions
+    #------------------------------------------------------------------------------------------------------------------------------------------------
 
     # Volume I: RISC-V User-Level ISA V2.2
-    # 31 27 | 26 25 | 24 20 | 19 15 | 14 12 | 11 7      | 6  0
-    #    funct7     |  rs2  |  rs1  | funct3| rd        |opcode          R-type
-    # rs3 | funct2  |  rs2  |  rs1  | funct3| rd        |opcode          R4-type
-    # imm[11:0]     |       |  rs1  | funct3| rd        |opcode          I-type
-    # imm[11:5]     | rs2   |  rs1  | funct3| imm[4:0]  |opcode          S-type
+    # 31 27 | 26 25     | 24 20 | 19 15 | 14 12 | 11 7              | 6  0
+    #    funct7         |  rs2  |  rs1  | funct3| rd                |opcode          R-type
+    # rs3 | funct2      |  rs2  |  rs1  | funct3| rd                |opcode          R4-type
+    # imm[11:0]         |       |  rs1  | funct3| rd                |opcode          I-type
+    # imm[11:5]         | rs2   |  rs1  | funct3| imm[4:0]          |opcode          S-type
+    # imm[12]|imm[10:5] | rs2   |  rs1  | funct3| imm[4:1] imm[11]  |opcode          B-type
+    # imm[20]|imm[10:1] imm[11] | imm[19:12]    | rd                |opcode          J-type
     def storeAssembly(self, instruction, arg1, arg2, arg3=0, arg4 =0):
         """
         stores instruction and arguments into memory after encoding using RiscV user level ISA
         """
-        instr = self.instruciton_dict_encoding.get(instruction)
+        instr = self.instruciton_dictionary.get(instruction)
         if(instr):
             # Use CS 61C Reference Card
             [opcode_bits, typ] = self.asm_dict[instruction]
@@ -368,8 +410,9 @@ class machine:
             #     type = 'J'
             # else:
             #     type = ''
+            # if (type == 'R'):   
 
-            # if (type == 'R'):                
+
             f7     = opcode_bits[0:7]
             f2     = opcode_bits[5:7]
             rs2c   = opcode_bits[8:13]  # rs2-code
@@ -409,20 +452,81 @@ class machine:
             elif typ == 'B' : bits = self.field(imm_b,12,12) + self.field(imm_b,10,5) + rs1 + rd + \
                         f3 + self.field(imm_b,4,1)   + self.field(imm_b,11,11) + opcode
                 
-            # write instruction into memory at address 's.pc'
-            self.write_i32(s.bits2u(bits), self.pc)
+            # write instruction into memory at address 'self.pc'
+            self.write_i32(self.bits2u(bits), self.pc)
             self.incrementPC()
+        else:
+            print("ERROR: instruction not supported")
         
+
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    # Decoding functions
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    def dec(self, bits):
+        """decode instruction"""
+        opcode = self.field(bits,  6,  0)
+        f3     = self.field(bits, 14, 12)
+        rs2c   = self.field(bits, 24, 20)  # rs2 code
+        f2     = self.field(bits, 26, 25)
+        f7     = self.field(bits, 31, 25)
+        rd     = self.bits2u(self.field(bits, 11,  7))
+        rs1    = self.bits2u(self.field(bits, 19, 15))
+        rs2    = self.bits2u(self.field(bits, 24, 20))
+        rs3    = self.bits2u(self.field(bits, 31, 27))
+        imm_i  = self.bits2i(self.field(bits, 31, 20))                                # I-type
+        imm_s  = self.bits2i(self.field(bits, 31, 25) + self.field(bits, 11,  7))        # S-type
+        imm_b  = self.bits2i(self.field(bits, 31, 31) + self.field(bits,  7,  7) +
+                        self.field(bits, 30, 25) + self.field(bits, 11,  8) + '0')  # B-type
+        imm_j  = self.bits2i(self.field(bits, 31, 31) + self.field(bits, 19, 12) +
+                        self.field(bits, 20, 20) + self.field(bits, 30, 21) + '0')  # J-type
+        opcode_bits = f7 + '_' + rs2c + '_' + f3 + '_' + opcode
+
+        # decode instruction (opcode_bits -> inst)
+        inst = 0
+        for k in self.decoder_dictionary:
+            if fnmatch.fnmatch(opcode_bits, k):
+                inst = self.decoder_dictionary[k][1]
+                break  # to speed up run-time
+        if inst == 0:
+            print('ERROR: this instruction is not supported: ' + bits)
+            while(True):
+                x = 1
+        
+        if inst   == 'JAL'      : self.JAL      (rd,  imm_j)
+        elif inst == 'JALR'     : self.JALR     (rd,  rs1,   imm_i)
+        elif inst == 'BEQ'      : self.BEQ      (rs1, rs2,   imm_b)
+        elif inst == 'BNE'      : self.BNE      (rs1, rs2,   imm_b)
+        elif inst == 'BLT'      : self.BLT      (rs1, rs2,   imm_b)
+        elif inst == 'SW'       : self.SW       (rs2, imm_s, rs1)
+        elif inst == 'ADDi'     : self.ADDi     (rd,  rs1,   imm_i)
+        elif inst == 'ADD'      : self.ADD      (rd,  rs1,   rs2)
+        elif inst == 'SUB'      : self.SUB      (rd,  rs1,   rs2)
+        elif inst == 'XOR'      : self.XOR      (rd,  rs1,   rs2)
+        elif inst == 'OR'       : self.OR       (rd,  rs1,   rs2)
+        elif inst == 'AND'      : self.AND      (rd,  rs1,   rs2)
+        elif inst == 'MUL'      : self.MUL      (rd,  rs1,   rs2)
+        elif inst == 'LW'       : self.LW       (rd,  imm_i, rs1)
+        
+        #print(inst)
+
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+    # excute from memory functions
+    #------------------------------------------------------------------------------------------------------------------------------------------------
+
     def execute(self, start, end=None, instructionCount=0):
         """
         Executes code from start label to end label or for instructionCount number of instructions
         """
-        self.pc = start
+        self.pc = self.getLabel('start')
         if end is None:
             for i in range(instructionCount):
-                inst = self.read(self.pc)
-
-
+                inst = self.read_i32(self.pc)  # fetch instruction from memory
+                self.dec(np.binary_repr(self.u(inst), 32))
+        else:  # this is for the case where argument 'end' is used
+            while self.pc != self.getLabel(end):
+                inst = self.read_i32(self.pc)  # fetch instruction from memory
+                self.dec(np.binary_repr(self.u(inst), 32))
+                
     #------------------------------------------------------------------------------------------------------------------------------------------------
     # Reset Instructions
     #------------------------------------------------------------------------------------------------------------------------------------------------

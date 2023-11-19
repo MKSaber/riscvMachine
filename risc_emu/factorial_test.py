@@ -45,38 +45,35 @@ t4 = 29
 t5 = 30
 t6 = 31
 
+
+m.addLabel('ret_one')
+m.storeAssembly('MUL', a1, 0, 0)
+m.storeAssembly('ADDi', a1, 1)
+
+m.addLabel('done')
+m.storeAssembly('LW', ra, 0, sp)
+m.storeAssembly('ADDi', sp, sp, 8)
+m.storeAssembly('JALR', ra)
+
 m.addLabel('fact')                  # arg: n in a0, returns n! in a1
 m.storeAssembly('ADDi', sp, sp, -8)
 m.storeAssembly('SW', ra, 0, sp)
-m.storeAssembly('Li', t0, 2)
-m.storeAssembly('')
+m.storeAssembly('MUL', t0, 0, 0)                            # m.storeAssembly('Li', t0, 2)
+m.storeAssembly('ADDi', t0, 2)                              # m.storeAssembly('Li', t0, 2)
+m.storeAssembly('BLT', a0, t0, m.getLabel('ret_one')) #TODO: find address from label dictionary
+m.storeAssembly('SW', a0, 4, sp)
+m.storeAssembly('ADDi', a0, a0, -1)
+m.storeAssembly('JAL', a1, m.getLabel('fact'))
+m.storeAssembly('LW', t0, 4, sp)
+m.storeAssembly('MUL', a1, t0, a1)
+m.storeAssembly('JAL', a1, m.getLabel('done'))
 
 
 m.addLabel('start')
-# print("-----")
-# print(m.getLabel('start'))
-# print("-----")
+m.storeAssembly('MUL', a0, 0, 0)                            # m.storeAssembly('Li', a0, 5)
+m.storeAssembly('ADDi', a0, 5)                              # m.storeAssembly('Li', a0, 5)
+m.storeAssembly('JAL', m.getLabel('fact'))
 
-
-# m.addLabel('ret_one')
-# m.excAssembly('Li', a1, 1)
-
-# m.addLabel('done')
-# m.excAssembly('LW', ra, 0, sp)
-# m.excAssembly('ADDi', sp, sp, 8)
-
-
-
-# m.addLabel('fact')                  # arg: n in a0, returns n! in a1
-# m.excAssembly('ADDi', sp, sp, -8)   # reverse stack area
-# m.excAssembly('SW', ra, 0, sp)
-# m.excAssembly('Li', t0, 2)
-# m.excAssembly('BLT', a0, t0, 'ret_one')         #TODO: check ret value location
-# m.excAssembly('SW', a0, 4, sp)
-# m.excAssembly('ADDi', a0, a0, -1)
-# m.excAssembly('JAL', m.getLabel('fact'))
-# m.excAssembly('LW', t0, 4, sp)
-# m.excAssembly('MUL', a1, t0, a1)
-# m.excAssembly('JUMP', m.getLabel('done'))       #TODO: check done location
+print("Factorial of 5!: " + str(m.registers[a1]))
 
 
