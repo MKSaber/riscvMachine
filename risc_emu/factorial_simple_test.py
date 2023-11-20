@@ -45,7 +45,6 @@ t4 = 29
 t5 = 30
 t6 = 31
 
-
 m.addLabel('return')                            #pc = 0
 m.storeAssembly('ADDi', a0, 0, 1)
 m.storeAssembly('JALR', ra, ra, 0)
