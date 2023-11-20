@@ -47,16 +47,19 @@ risc_emu
 clearly any assumptions you make.
 - Each needed instrcution was defined and implemented with a comment that could be read out via --help()
 - Extra instructions were needed to be able to perform more complex tasks.
+  
 
 1. Write a RISC machine for executing the instruction set.
 - RISC emulator can excute instructions directly based on an assembly format.
 
 2. Write some tests and a test harness that checks that these tests pass.
 - 3 test files were written to unit test the instructions + do a full validation test that goes through multiple APIs at the same time
+  
 
 3. Write some programs (fib, factorial, sum) for the RISC machine.
 - factorial program works as expected
 - fib program still doesn't work - it goes into an infinite loop (WIP)
+  
 
 4. How would you implement linked lists here?
 - This means I'll need to create types and use the *next to dereference the memory. Not sure how can that be achieved but my assumption would be as follows:
@@ -70,14 +73,17 @@ c. *next ( initially will contain 0 ( NULL)) and evertime that pointer is assign
 decode and then execute the program.
 - Done to solve the factorial assembly code as I was unable to find a non-recursive code online
 
+
 6. Extend the instruction set with other arithmetic and logical instructions.
 - Done to be able to excute a full program (AND, OR, XOR, MUL, ...)
 
-6. Extend the memory system by a cache. Explain how you've implemented a
+
+7. Extend the memory system by a cache. Explain how you've implemented a
 cache replacement policy.
 - The only way that I could think of a cache replacement policy would be as follows: have a small array acting as cashe the first few instruction reads are copied into the cache, every new fetch would check cache first, if a cache hit -> read from cache, if a cashe miss -> read from memory.
 
-7. Come up with a metric to cost program execution in terms of compute +
+
+8. Come up with a metric to cost program execution in terms of compute +
 memory. Explain your idea and implement it.
 - created a much of metric counters that would count number of instructions, number of arithmatic operations, number of branches and the time that the code took to execute.
 - this is protected by a machine flag "debug"
