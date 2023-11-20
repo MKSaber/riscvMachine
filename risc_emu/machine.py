@@ -428,8 +428,8 @@ class machine:
             # if (type == 'R'):   
 
 
-            f7     = opcode_bits[0:7]
-            f3     = opcode_bits[14:17]
+            funct7     = opcode_bits[0:7]
+            funct3     = opcode_bits[14:17]
             opcode = opcode_bits[18:25]
             
             # swap arg2 and arg3 if typ == IL (this is needed for all load instructions)
@@ -441,9 +441,12 @@ class machine:
                 arg3 = self.getLabel(arg3)
                 arg3 -= self.pc
     
-            if instruction in ['JAL']:
+            if instruction == 'JAL':
                 arg2 = self.getLabel(arg2)
                 arg2 -= self.pc
+
+            # TODO: loop throughout the code, find labels and store their offset first, then loop and encode+store into memory
+            #       this will allow the code to be written in a non-linear matter
 
             rd    = np.binary_repr(arg1, 5)
             rs1   = np.binary_repr(arg2, 5)
@@ -453,16 +456,16 @@ class machine:
             imm_j = np.binary_repr(arg2, 21)
             imm_b = np.binary_repr(arg3, 13)
 
-            if   typ == 'R' : bits = f7       + rs2  + rs1 + f3 + rd + opcode
-            elif typ == 'I' : bits = imm_i           + rs1 + f3 + rd + opcode 
-            elif typ == 'S' : bits = self.field(imm_s,11,5) + rd + rs2 + f3 + \
+            if   typ == 'R' : bits = funct7 + rs2  + rs1 + funct3 + rd + opcode
+            elif typ == 'I' : bits = imm_i + rs1 + funct3 + rd + opcode 
+            elif typ == 'S' : bits = self.field(imm_s,11,5) + rd + rs2 + funct3 + \
                                      self.field(imm_s,4,0) + opcode
             
             elif typ == 'J' : bits = self.field(imm_j,20,20) + self.field(imm_j,10,1) + \
                              self.field(imm_j,11,11) + self.field(imm_j,19,12) + rd + opcode
             
             elif typ == 'B' : bits = self.field(imm_b,12,12) + self.field(imm_b,10,5) + rs1 + rd + \
-                        f3 + self.field(imm_b,4,1)   + self.field(imm_b,11,11) + opcode
+                        funct3 + self.field(imm_b,4,1)   + self.field(imm_b,11,11) + opcode
                 
             # write instruction into memory at address 'self.pc'
             self.write_i32(self.bits2u(bits), self.pc)
@@ -483,21 +486,23 @@ class machine:
     def decode(self, bits):
         """decode instruction based on Volume I: RISC-V User-Level ISA V2.2"""
         opcode = self.field(bits,  6,  0)
-        f3     = self.field(bits, 14, 12)
+        funct3 = self.field(bits, 14, 12)
         rs2c   = self.field(bits, 24, 20)  # rs2 code
-        f2     = self.field(bits, 26, 25)
-        f7     = self.field(bits, 31, 25)
+        funct7 = self.field(bits, 31, 25)
+
         rd     = self.bits2u(self.field(bits, 11,  7))
         rs1    = self.bits2u(self.field(bits, 19, 15))
         rs2    = self.bits2u(self.field(bits, 24, 20))
-        rs3    = self.bits2u(self.field(bits, 31, 27))
-        imm_i  = self.bits2i(self.field(bits, 31, 20))                                # I-type
-        imm_s  = self.bits2i(self.field(bits, 31, 25) + self.field(bits, 11,  7))        # S-type
+
+        imm_i  = self.bits2i(self.field(bits, 31, 20))                                      # I-type
+        
+        imm_s  = self.bits2i(self.field(bits, 31, 25) + self.field(bits, 11,  7))           # S-type
         imm_b  = self.bits2i(self.field(bits, 31, 31) + self.field(bits,  7,  7) +
-                        self.field(bits, 30, 25) + self.field(bits, 11,  8) + '0')  # B-type
+                        self.field(bits, 30, 25) + self.field(bits, 11,  8) + '0')          # B-type
+        
         imm_j  = self.bits2i(self.field(bits, 31, 31) + self.field(bits, 19, 12) +
-                        self.field(bits, 20, 20) + self.field(bits, 30, 21) + '0')  # J-type
-        opcode_bits = f7 + '_' + rs2c + '_' + f3 + '_' + opcode
+                        self.field(bits, 20, 20) + self.field(bits, 30, 21) + '0')          # J-type
+        opcode_bits = funct7 + '_' + rs2c + '_' + funct3 + '_' + opcode
 
         # decode instruction (opcode_bits -> inst)
         inst = 0
