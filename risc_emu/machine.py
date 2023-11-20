@@ -55,7 +55,7 @@ class machine:
             '0000001_?????_000_0110011': ['R',  'MUL'      ],
             '???????_?????_010_0100011': ['S',  'SW'       ],
             '???????_?????_000_0010011': ['I',  'ADDi'     ],
-            '???????_?????_010_0000011': ['IL', 'LW'       ],
+            '???????_?????_010_0000011': ['I',  'LW'       ],
             '???????_?????_000_1100011': ['B',  'BEQ'      ],
             '???????_?????_001_1100011': ['B',  'BNE'      ],
             '???????_?????_101_1100011': ['B',  'BGE'      ],
@@ -372,25 +372,29 @@ class machine:
         """
         write 32-bit int to memory (takes 4 byte-addresses)
         """
-        for i in range(4): self.memory[addr + i] = (x >> (8*i)) & 0xFF
+        self.memory[addr]     = (x     )  & 0xFF
+        self.memory[addr + 1] = (x >> 8)  & 0xFF
+        self.memory[addr + 2] = (x >> 16) & 0xFF
+        self.memory[addr + 3] = (x >> 24) & 0xFF
 
-    def bits2u(self, bits):
-        """convert bit-string to unsigned int"""
+    def bits_2_uint(self, bits):
+        """
+        convert bit-string to unsigned int
+        """
         return int(bits, 2)
     
     def bits2i(self, bits):
-        """convert bit-string to signed int (subtract constant if msb is 1)"""
-        return self.bits2u(bits) - (1 << len(bits) if bits[0] == '1' else 0)
+        """
+        convert bit-string to signed int (subtract constant if msb is 1)
+        """
+        return self.bits_2_uint(bits) - (1 << len(bits) if bits[0] == '1' else 0)
     
     def read_i32(self, addr):
         """"read 32-bit int from memory"""
-        ret = self.i8(self.memory[addr + 3]) << 3*8
+        ret = np.int8(self.memory[addr + 3]) << 3*8
         for i in range(3): ret += self.memory[addr + i] << i*8
         return ret
-    
-    def i8(s,x): return np.int8(x)    # convert to 8-bit signed
 
-    def u (s,x): return np.uint32(x)  # convert to 32-bit unsigned
     #------------------------------------------------------------------------------------------------------------------------------------------------
     # Encoding functions
     #------------------------------------------------------------------------------------------------------------------------------------------------
@@ -412,29 +416,18 @@ class machine:
         if(instr):
             # Use CS 61C Reference Card
             [opcode_bits, typ] = self.asm_dict[instruction]
-
-            # if(instruction == 'ADD' or instruction == 'SUB' or instruction == 'AND' or instruction == 'OR' or instruction == 'XOR'):
-            #     type = 'R'
-            # elif(instruction == 'ADDi' or instruction == 'LW'):
-            #     type = 'I'
-            # elif(instruction == 'SW'):
-            #     type = 'S'
-            # elif(instruction == 'BGE' or instruction == 'BLT'):
-            #     type = 'B'
-            # elif(instruction == 'JAL' or instruction == 'JMP'):
-            #     type = 'J'
-            # else:
-            #     type = ''
-            # if (type == 'R'):   
             
             funct7 = opcode_bits[0:7]
             funct3 = opcode_bits[14:17]
             opcode = opcode_bits[18:25]
      
-            # swap arg2 and arg3 if typ == IL (this is needed for all load instructions)
-            if typ == 'IL':
-                arg2, arg3 = arg3, arg2
-                typ = 'I'
+            # swap arg2 and arg3 if instruction is LW 
+            if instruction == 'LW':
+                temp2 = arg2
+                temp3 = arg3
+
+                arg2 = temp3
+                arg3 = temp2
             
             if typ == 'B':
                 arg3 = self.getLabel(arg3)
@@ -467,7 +460,7 @@ class machine:
                         funct3 + self.field(imm_b,4,1)   + self.field(imm_b,11,11) + opcode
                 
             # write instruction into memory at address 'self.pc'
-            self.write_i32(self.bits2u(bits), self.pc)
+            self.write_i32(self.bits_2_uint(bits), self.pc)
             self.incrementPC()
 
             if self.debug == True:
@@ -489,9 +482,9 @@ class machine:
         rs2c   = self.field(bits, 24, 20)  # rs2 code
         funct7 = self.field(bits, 31, 25)
 
-        rd     = self.bits2u(self.field(bits, 11,  7))
-        rs1    = self.bits2u(self.field(bits, 19, 15))
-        rs2    = self.bits2u(self.field(bits, 24, 20))
+        rd     = self.bits_2_uint(self.field(bits, 11,  7))
+        rs1    = self.bits_2_uint(self.field(bits, 19, 15))
+        rs2    = self.bits_2_uint(self.field(bits, 24, 20))
 
         imm_i  = self.bits2i(self.field(bits, 31, 20))                                      # I-type
         
@@ -556,11 +549,11 @@ class machine:
         if end is None:
             for i in range(instructionCount):
                 inst = self.read_i32(self.pc)  # fetch instruction from memory
-                self.decode(np.binary_repr(self.u(inst), 32))
+                self.decode(np.binary_repr(np.uint32(inst), 32))
         else:  # this is for the case where argument 'end' is used
             while self.pc != self.getLabel(end):
                 inst = self.read_i32(self.pc)  # fetch instruction from memory
-                self.decode(np.binary_repr(self.u(inst), 32))
+                self.decode(np.binary_repr(np.uint32(inst), 32))
 
         if self.debug == True:
             self.excution_time = time.perf_counter() - self.excution_time
