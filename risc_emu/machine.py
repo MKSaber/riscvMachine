@@ -210,7 +210,6 @@ class machine:
         Add rs1 and rs2 and store the result in rd
         """
         self.registers[rd] = self.registers[rs1] + self.registers[rs2]
-        print(self.registers[rd])
         self.incrementPC()
 
     def SUB(self, rd, rs1, rs2):
@@ -225,7 +224,6 @@ class machine:
         Add an immediate value (val) to rs1 and store the result in rd
         """
         self.registers[rd] = self.registers[rs1] + val;
-        print(self.registers[rd])
         self.incrementPC()
     
     def MUL(self, rd, rs1, rs2):
@@ -272,8 +270,6 @@ class machine:
             self.incrementPC(val)
         else:
             self.incrementPC()
-        print(self.registers[rs1])
-        print(self.registers[rs2])
 
     def BNE(self, rs1, rs2, val):
         """
@@ -519,7 +515,7 @@ class machine:
             if self.debug == True:
                 self.dump()
             self.HALT()
-        print(inst)
+
         if inst   == 'JAL'      : self.JAL      (rd,  imm_j)
         elif inst == 'JALR'     : self.JALR     (rd,  rs1,   imm_i)
         elif inst == 'BEQ'      : self.BEQ      (rs1, rs2,   imm_b)
@@ -533,7 +529,7 @@ class machine:
         elif inst == 'OR'       : self.OR       (rd,  rs1,   rs2)
         elif inst == 'AND'      : self.AND      (rd,  rs1,   rs2)
         elif inst == 'MUL'      : self.MUL      (rd,  rs1,   rs2)
-        elif inst == 'LW'       : self.LW       (rd,  imm_i, rs1); print(self.registers[rd]);print(self.memory[self.memory[rs1]+imm_i+3]);print(self.memory[self.memory[rs1]+imm_i+2]);print(self.memory[self.memory[rs1]+imm_i+1]);print(self.memory[imm_i+self.memory[rs1]]);print(imm_i)
+        elif inst == 'LW'       : self.LW       (rd,  imm_i, rs1)
         
         #print(inst)
         if self.debug == True:
