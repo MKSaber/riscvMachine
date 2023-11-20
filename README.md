@@ -43,47 +43,30 @@ risc_emu
 
 
 # Questions and Answers:
-0. Define and implement the machine model and the instruction set. State very
-clearly any assumptions you make.
-- Each needed instrcution was defined and implemented with a comment that could be read out via --help()
-- Extra instructions were needed to be able to perform more complex tasks.
-  
+**1. Define and implement the machine model and the instruction set. State very clearly any assumptions you make.**  
+Each needed instruction was defined and implemented with a comment that could be read out via --help()
+Extra instructions were needed to be able to perform more complex tasks.
 
-1. Write a RISC machine for executing the instruction set.
-- RISC emulator can excute instructions directly based on an assembly format.
+**2. Write a RISC machine for executing the instruction set.**   
+RISC emulator can execute instructions directly based on an assembly format.
+Write some tests and a test harness that checks that these tests pass.   
+3 test files were written to unit test the instructions + do a full validation test that goes through multiple APIs at the same time   
 
-2. Write some tests and a test harness that checks that these tests pass.
-- 3 test files were written to unit test the instructions + do a full validation test that goes through multiple APIs at the same time
-  
+**3. Write some programs (fib, factorial, sum) for the RISC machine.**   
+factorial program works as expected
+fib program works as expected   
 
-3. Write some programs (fib, factorial, sum) for the RISC machine.
-- factorial program works as expected
-- fib program still doesn't work - it goes into an infinite loop (WIP)
-  
+**4. How would you implement linked lists here?**  
+This means I'll need to create types and use the *next to dereference the memory. Not sure how can that be achieved but my assumption would be as follows: once a node is created: 3 integer values will be stored: a. pointer (has the address of the node(using the self.pc when storing it) b. value (contans the value stored in that node) c. *next ( initially will contain 0 ( NULL)) and every time that pointer is assigned to a node: its value will contain the address of the next node's pointer.   
 
-4. How would you implement linked lists here?
-- This means I'll need to create types and use the *next to dereference the memory. Not sure how can that be achieved but my assumption would be as follows:
-once a node is created: 3 integer values will be stored:
-a. pointer (has the address of the node(using the self.pc when storing it)
-b. value (contans the value stored in that node)
-c. *next ( initially will contain 0 ( NULL)) and evertime that pointer is assigned to a node: its value will contain the address of the next node's pointer.
+**5. Design a binary encoding for the instruction set. Get your RISC machine to decode and then execute the program.**  
+Done to solve the factorial assembly code as I was unable to find a non-recursive code online   
 
+**6. Extend the instruction set with other arithmetic and logical instructions.**  
+Done to be able to execute a full program (AND, OR, XOR, MUL, ...)   
 
-5. Design a binary encoding for the instruction set. Get your RISC machine to
-decode and then execute the program.
-- Done to solve the factorial assembly code as I was unable to find a non-recursive code online
+**7. Extend the memory system by a cache. Explain how you've implemented a cache replacement policy.**  
+The only way that I could think of a cache replacement policy would be as follows: have a small array acting as cashe the first few instruction reads are copied into the cache, every new fetch would check cache first, and if a cache hit -> read from cache, if a cashe miss -> read from memory.   
 
-
-6. Extend the instruction set with other arithmetic and logical instructions.
-- Done to be able to excute a full program (AND, OR, XOR, MUL, ...)
-
-
-7. Extend the memory system by a cache. Explain how you've implemented a
-cache replacement policy.
-- The only way that I could think of a cache replacement policy would be as follows: have a small array acting as cashe the first few instruction reads are copied into the cache, every new fetch would check cache first, if a cache hit -> read from cache, if a cashe miss -> read from memory.
-
-
-8. Come up with a metric to cost program execution in terms of compute +
-memory. Explain your idea and implement it.
-- created a much of metric counters that would count number of instructions, number of arithmatic operations, number of branches and the time that the code took to execute.
-- this is protected by a machine flag "debug"
+**8. Come up with a metric to cost program execution in terms of compute + memory. Explain your idea and implement it.**  
+Created a much of metric counters that would count the number of instructions, the number of arithmetic operations, the number of branches, and the time that the code took to execute.this is protected by a machine flag "debug"
